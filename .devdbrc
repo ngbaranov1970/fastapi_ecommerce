@@ -1,0 +1,6 @@
+[
+  {
+    "type": "sqlite",
+    "path": "/home/nikolai/VScode Projects/fastapi_ecommerce/ecommerce.db"
+  }
+]
