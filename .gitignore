@@ -1,19 +1,39 @@
-cat > .gitignore << 'EOF'
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+*.so
 *$py.class
 
+# Virtual environment
 .venv/
 venv/
 env/
 
+# IDE
+.vscode/
+.idea/
+
+# Testing and cache
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
+# Environment files
+.env
+
+# OS
 .DS_Store
-.idea/
-.vscode/
 
+# Database
 *.db
-EOF
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+>>>>>>> 3dfffaf59b7928f432bd35ff8d2af5d0d214f79b
