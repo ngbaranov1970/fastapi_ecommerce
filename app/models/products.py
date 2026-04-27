@@ -10,6 +10,7 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.categories import Category
+    from app.models.users import User
 
 
 
@@ -24,5 +25,8 @@ class Product(Base):
     stock: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)  # New
+    seller_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)  # New
+
 
     category: Mapped["Category"] = relationship("Category", back_populates="products")  # New
+    seller: Mapped["User"] = relationship("User", back_populates="products")  # New
