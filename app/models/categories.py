@@ -8,7 +8,6 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.products import Product
-    from app.models.users import User
 
 class Category(Base):
     __tablename__ = "categories"
@@ -21,5 +20,4 @@ class Category(Base):
     products: Mapped[list["Product"]] = relationship("Product", back_populates="category")  # New
     parent: Mapped["Category | None"] = relationship("Category", back_populates="children", remote_side="Category.id")
     children: Mapped[list["Category"]] = relationship("Category", back_populates="parent")
-    admin: Mapped["User"] = relationship("User", back_populates="categories")
     
