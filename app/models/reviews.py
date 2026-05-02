@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Boolean, Integer, Numeric, DateTime
+from sqlalchemy import String, Boolean, Integer, Numeric, DateTime, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship  # New
 from sqlalchemy import ForeignKey
 
@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 
 class Review(Base):
     __tablename__ = "reviews"
+
+    __table_args__ = (
+            CheckConstraint("grade >= 1 AND grade <= 5", name="check_review_grade_range"),
+        )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     grade: Mapped[int] = mapped_column(Integer, nullable=False)
