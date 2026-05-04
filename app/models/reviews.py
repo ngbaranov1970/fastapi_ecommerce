@@ -1,96 +1,28 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from decimal import Decimal
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.database import Base
 
-class CategoryCreate(BaseModel):
-    """
-    Модель для создания и обновления категории.
-    Используется в POST и PUT запросах.
-    """
-    name: str = Field(..., min_length=3, max_length=50,
-                      description="Название категории (3-50 символов)")
-    parent_id: int | None = Field(None, description="ID родительской категории, если есть")
+if TYPE_CHECKING:
+    from app.models.products import Product
+    from app.models.users import User
 
 
-class Category(BaseModel):
-    """
-    Модель для ответа с данными категории.
-    Используется в GET-запросах.
-    """
-    id: int = Field(..., description="Уникальный идентификатор категории")
-    name: str = Field(..., description="Название категории")
-    parent_id: int | None = Field(None, description="ID родительской категории, если есть")
-    is_active: bool = Field(..., description="Активность категории")
+class Review(Base):
+    __tablename__ = "reviews"
 
-    model_config = ConfigDict(from_attributes=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    grade: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    comment_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 
-
-class ProductCreate(BaseModel):
-    """
-    Модель для создания и обновления товара.
-    Используется в POST и PUT запросах.
-    """
-    name: str = Field(..., min_length=3, max_length=100,
-                      description="Название товара (3-100 символов)")
-    description: str | None = Field(None, max_length=500,
-                                       description="Описание товара (до 500 символов)")
-    price: Decimal = Field(..., gt=0, description="Цена товара (больше 0)", decimal_places=2)
-    image_url: str | None = Field(None, max_length=200, description="URL изображения товара")
-    stock: int = Field(..., ge=0, description="Количество товара на складе (0 или больше)")
-    category_id: int = Field(..., description="ID категории, к которой относится товар")
-
-
-class Product(BaseModel):
-    """
-    Модель для ответа с данными товара.
-    Используется в GET-запросах.
-    """
-    id: int = Field(..., description="Уникальный идентификатор товара")
-    name: str = Field(..., description="Название товара")
-    description: str | None = Field(None, description="Описание товара")
-    price: Decimal = Field(..., description="Цена товара в рублях", gt=0, decimal_places=2)
-    image_url: str | None = Field(None, description="URL изображения товара")
-    stock: int = Field(..., description="Количество товара на складе")
-    category_id: int = Field(..., description="ID категории")
-    is_active: bool = Field(..., description="Активность товара")
-    rating: float = Field(0, ge=0, le=5, description="Средняя оценка товара от 1 до 5")
-
-    model_config = ConfigDict(from_attributes=True)
-
-class UserCreate(BaseModel):
-    email: EmailStr = Field(description="Email пользователя")
-    password: str = Field(min_length=8, description="Пароль (минимум 8 символов)")
-    role: str = Field(default="buyer", pattern="^(buyer|seller|admin)$", description="Роль: 'buyer', 'seller' или 'admin'")
-
-
-class User(BaseModel):
-    id: int
-    email: EmailStr
-    is_active: bool
-    role: str
-    model_config = ConfigDict(from_attributes=True)
-
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-
-class ReviewCreate(BaseModel):
-    grade: int = Field(..., ge=1, le=5, description="Оценка товара от 1 до 5")
-    comment: str | None = Field(None, max_length=500, description="Комментарий к товару (до 500 символов)")
-    product_id: int = Field(..., description="ID товара, к которому относится отзыв")
-
-
-
-
-class Review(BaseModel):
-    id: int = Field(..., description='Уникальный единтификатор отзыва')
-    grade: int = Field(..., description='Оценка товара от 1 до 5')
-    comment: str | None = Field(..., description='Комментарий к товару')
-    comment_date: datetime = Field(..., description='Дата и время создания отзыва')
-    is_active: bool = Field(..., description='Активность отзыва')
-    product_id: int = Field(..., description='ID товара, к которому относится отзыв')
-    user_id: int = Field(..., description='ID пользователя, который оставил отзыв')
-    model_config = ConfigDict(from_attributes=True)
+    product: Mapped["Product"] = relationship("Product", back_populates="reviews")
+    user: Mapped["User"] = relationship("User", back_populates="reviews")
