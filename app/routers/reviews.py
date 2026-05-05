@@ -32,8 +32,12 @@ async def create_review(
         select(ProductModel).where(ProductModel.id == review.product_id, ProductModel.is_active == True)
     )
     if not product_result.first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Product not found or inactive")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
     
+    if current_user.role != "buyer" or not current_user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only buyers can create reviews")
+    if review.grade < 1 or review.grade > 5:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Rating must be between 1 and 5")
     db_review = ReviewModel(**review.model_dump(), user_id=current_user.id)
     db.add(db_review)
     await db.commit()
@@ -43,3 +47,11 @@ async def create_review(
     await update_product_rating(db, review.product_id)
 
     return db_review
+
+@router.get("/", response_model=ReviewSchema)
+async def get_reviews(db: AsyncSession = Depends(get_async_db)):
+    """
+    Получает список всех отзывов.
+    """
+    result = await db.scalars(select(ReviewModel).where(ReviewModel.is_active == True))
+    return result.all()
