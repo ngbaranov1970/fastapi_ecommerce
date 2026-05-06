@@ -5,8 +5,9 @@ from sqlalchemy import select, update
 from app.models.products import Product as ProductModel
 from app.models.categories import Category as CategoryModel
 from app.models.users import User as UserModel
+from app.models.reviews import Review as ReviewModel
 from app.auth import get_current_seller
-from app.schemas import Product as ProductSchema, ProductCreate
+from app.schemas import Product as ProductSchema, ProductCreate, Review as ReviewSchema
 from app.db_depends import get_async_db
 
 # Создаём маршрутизатор для товаров
@@ -76,7 +77,20 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_async_db))
   
     return product
 
+@router.get("/{product_id}/reviews", response_model=list[ReviewSchema], status_code=status.HTTP_200_OK)
+async def get_product_reviews(product_id: int, db: AsyncSession = Depends(get_async_db)):
+    """
+    Возвращает список отзывов для указанного товара по его ID.
+    """
+    stmt_product = select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active)
+    product = await db.scalars(stmt_product)
+    product = product.first()
+    if product is None or not product.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
 
+    stmt_reviews = select(ReviewModel).where(ReviewModel.product_id == product_id, ReviewModel.is_active)
+    reviews = await db.scalars(stmt_reviews)
+    return reviews.all()
 
 @router.put("/{product_id}", response_model=ProductSchema)
 async def update_product(

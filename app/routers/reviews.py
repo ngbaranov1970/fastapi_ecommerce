@@ -24,7 +24,7 @@ async def create_review(
     current_user: UserModel = Depends(get_current_seller)
 ):
     """
-    Создаёт новый отзыв, привязанный к текущему пользователю (только для 'buyer').
+    Создаёт новый отзыв, привязанный к текущему пользователю (только для 'seller').
     После создания отзыва обновляет рейтинг товара.
     """
     # Проверяем, что товар существует и активен
@@ -34,8 +34,8 @@ async def create_review(
     if not product_result.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
     
-    if current_user.role != "buyer" or not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only buyers can create reviews")
+    if current_user.role != "seller" or not current_user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only sellers can create reviews")
     if review.grade < 1 or review.grade > 5:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Rating must be between 1 and 5")
     db_review = ReviewModel(**review.model_dump(), user_id=current_user.id)
@@ -48,10 +48,12 @@ async def create_review(
 
     return db_review
 
-@router.get("/", response_model=ReviewSchema)
+@router.get("/", response_model=list[ReviewSchema])
 async def get_reviews(db: AsyncSession = Depends(get_async_db)):
     """
     Получает список всех отзывов.
     """
     result = await db.scalars(select(ReviewModel).where(ReviewModel.is_active == True))
     return result.all()
+
+
