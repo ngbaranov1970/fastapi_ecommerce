@@ -77,20 +77,39 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_async_db))
   
     return product
 
-@router.get("/{product_id}/reviews", response_model=list[ReviewSchema], status_code=status.HTTP_200_OK)
-async def get_product_reviews(product_id: int, db: AsyncSession = Depends(get_async_db)):
-    """
-    Возвращает список отзывов для указанного товара по его ID.
-    """
-    stmt_product = select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active)
-    product = await db.scalars(stmt_product)
-    product = product.first()
-    if product is None or not product.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
+from fastapi import APIRouter, HTTPException, Query
+from sqlalchemy import select, func, desc, update
 
-    stmt_reviews = select(ReviewModel).where(ReviewModel.product_id == product_id, ReviewModel.is_active)
-    reviews = await db.scalars(stmt_reviews)
-    return reviews.all()
+from app.schemas import Product as ProductSchema, ProductCreate, ProductList  # Импортируем схемы
+
+
+@router.get("/", response_model=ProductList)
+async def get_all_products(
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=100),
+        db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Возвращает список всех активных товаров.
+    """
+    total_stmt = select(func.count()).select_from(ProductModel).where(
+        ProductModel.is_active == True)
+    total = await db.scalar(total_stmt) or 0
+
+    products_stmt = (
+        select(ProductModel)
+        .where(ProductModel.is_active == True)
+        .order_by(ProductModel.id)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    items = (await db.scalars(products_stmt)).all()
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 @router.put("/{product_id}", response_model=ProductSchema)
 async def update_product(

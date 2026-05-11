@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from app.models.reviews import Review as ReviewModel
 from app.models.products import Product as ProductModel
 from app.models.users import User as UserModel
-from app.auth import get_current_seller
+from app.auth import get_current_seller, get_current_user
 
 from app.schemas import Review as ReviewSchema, ReviewCreate
 from app.db_depends import get_async_db
@@ -57,3 +57,31 @@ async def get_reviews(db: AsyncSession = Depends(get_async_db)):
     return result.all()
 
 
+@router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_review(
+    review_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Удаляет отзыв по ID (для 'seller' и 'admin').
+    После удаления отзыва обновляет рейтинг товара.
+    """
+    review_result = await db.scalars(
+        select(ReviewModel).where(ReviewModel.id == review_id, ReviewModel.is_active == True)
+    )
+    review = review_result.first()
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found or inactive")
+    
+    if current_user.role not in ("seller", "admin") or not current_user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only sellers or admins can delete reviews")
+    
+    # Логическое удаление отзыва
+    await db.execute(
+        update(ReviewModel).where(ReviewModel.id == review_id).values(is_active=False)
+    )
+    await db.commit()
+
+    # Обновляем рейтинг товара после удаления отзыва
+    await update_product_rating(db, review.product_id)
